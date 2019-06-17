@@ -3,6 +3,7 @@ import styled from "styled-components";
 
 const SVG = styled.svg`
   cursor: pointer;
+  margin-left: 1rem;
   fill: rgba(255, 255, 255, 0.3);
   width: ${({ width }) => width || "20px"};
   height: ${({ height }) => height || "20px"};

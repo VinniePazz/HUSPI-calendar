@@ -1,8 +1,25 @@
 import React, { Component } from "react";
-import PropTypes from "prop-types";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
+import { format } from "date-fns";
 
 import Modal from "./Modal";
+
+const ruLocale = require("date-fns/locale/ru");
+
+const animation = keyframes`
+  0% {
+    transform: scale(1);
+    background: #e5989b;
+  }
+  50% {
+    transform: scale(1.2);
+    background: #ff5f65;
+  }
+  100% {
+    transform: scale(1);
+    background: #e5989b;
+  }
+`;
 
 const StyledDay = styled.span`
   color: ${({ dim }) => (dim ? "#929292" : "#ffece2")};
@@ -15,24 +32,27 @@ const StyledDay = styled.span`
   border: 1px solid transparent;
   transition: all 0.2s;
 
-  &::before {
+  & span {
     content: "";
     width: 30px;
     height: 30px;
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     border-radius: 100%;
     z-index: 0;
     display: ${({ isToday }) => (isToday ? "block" : "none")};
-    background-color: #b5838d;
+    background-color: #e5989b;
+    animation: ${animation} 1s linear;
+    animation-iteration-count: 2;
+    ${({ animate }) =>
+      animate
+        ? "animation-play-state: running"
+        : "animation-play-state: paused"}
   }
 
   &::after {
     position: absolute;
     content: "";
-    background: #ffcdb2;
+    background: ${({ color }) => color};
     top: 7%;
     right: 7%;
     height: 7px;
@@ -58,24 +78,45 @@ export default class Day extends Component {
   toogleModal = () => {
     this.setState(prevState => ({ showModal: !prevState.showModal }));
   };
+
   render() {
+    const {
+      isToday,
+      dim,
+      animate,
+      id,
+      tasks,
+      addTask,
+      deleteTask,
+      isPrevious
+    } = this.props;
+
+    // const currentDate = id.split("/"); // [19, 06, 1994]
+    // currentDate[1] = format(new Date(currentDate[0], currentDate[2]), "MMMM", {
+    //   locale: ruLocale
+    // });
+
     return (
       <>
         <StyledDay
           onClick={this.toogleModal}
-          dim={this.props.dim}
-          isToday={this.props.isToday}
-          isHaveTasks={this.props.tasks.length > 0}
+          dim={dim}
+          isToday={isToday}
+          animate={animate}
+          isHaveTasks={tasks.length > 0}
+          color={tasks.length > 0 && tasks[0].color}
         >
-          <p>{this.props.id.split("/")[0]}</p>
+          <p>{id.split("/")[0]}</p>
+          <span />
         </StyledDay>
         {this.state.showModal && (
           <Modal
-            closeModal={this.toogleModal}
-            tasks={this.props.tasks}
-            id={this.props.id}
-            addTask={this.props.addTask}
-            deleteTask={this.props.deleteTask}
+            tasks={tasks}
+            id={id}
+            addTask={addTask}
+            deleteTask={deleteTask}
+            isPrevious={isPrevious}
+            toogleModal={this.toogleModal}
           />
         )}
       </>
