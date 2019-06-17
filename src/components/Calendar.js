@@ -1,12 +1,22 @@
 import React, { Component } from "react";
 import styled from "styled-components";
 
+import {
+  endOfMonth,
+  getDaysInMonth,
+  format,
+  startOfMonth,
+  isToday
+} from "date-fns";
+
+import { getInfoAboutMonth } from "../utils/dates";
+
+import Day from "./Day";
 import LeftArrow from "../icons/LeftArrow.jsx";
 import RightArrow from "../icons/RightArrow.jsx";
 
 const Wrapper = styled.div`
-  width: 350px;
-  height: 500px;
+  min-width: 320px;
   padding: 1rem;
   background: #6d6875;
   box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
@@ -14,7 +24,9 @@ const Wrapper = styled.div`
   border-radius: 5px;
   display: flex;
   flex-direction: column;
+  position: relative;
 `;
+
 const Header = styled.div`
   display: flex;
   align-items: center;
@@ -31,6 +43,7 @@ const TodayCTA = styled.button`
   text-transform: uppercase;
   color: #ffcdb2;
   cursor: pointer;
+  outline: none;
 `;
 
 const Body = styled.div`
@@ -66,75 +79,258 @@ const Days = styled.div`
   grid-auto-rows: 50px;
 `;
 
-const Day = styled.span`
-  color: #ffece2;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: default;
-  position: relative;
-  font-weight: 600;
-
-  p {
-    z-index: 10000;
-  }
-
-  &:hover {
-    color: #ffcdb2;
-  }
-`;
-
-const Circle = styled.span`
-  position: absolute;
-  content: "";
-  background: ${({ color }) => color};
-  top: 50%;
-  left: ${({ left }) => `${left}%`};
-  transform: translate(-50%, -50%);
-  height: 40px;
-  width: 40px;
-  border-radius: 100%;
-  z-index: ${({ n }) => n};
-`;
-
-const Footer = styled.div``;
-
 export default class Calendar extends Component {
-  render() {
-    return (
-      <Wrapper>
-        <Header>
-          <LeftArrow />
-          <TodayCTA>cегодня</TodayCTA>
-          <RightArrow />
-        </Header>
-        <Body>
-          <Month>Июнь 2019</Month>
-          <DaysOfWeek>
-            <span>Пн</span>
-            <span>Вт</span>
-            <span>Ср</span>
-            <span>Чт</span>
-            <span>Пт</span>
-            <span>Сб</span>
-            <span>Вс</span>
-          </DaysOfWeek>
-          <Days>
-            {Array.from({ length: 42 }).map((day, i) => (
-              <Day key={i}>
-                <p>{i}</p>
-                {i === 7 ? (
-                  <>
-                    <Circle left={"50"} color={"#ff8f00"} n={2} />
-                    <Circle left={"53"} color={"#00ffde"} n={1} />
-                  </>
-                ) : null}
-              </Day>
-            ))}
-          </Days>
-        </Body>
-        <Footer />
-      </Wrapper>
+  state = {
+    loading: true,
+    tasksId: [],
+    tasks: {}
+  };
+
+  addTask = (id, task) => {
+    task.id = Date.now(); //generated aka unique id for task
+    const { tasksId, tasks } = this.state;
+    let newTasksId, newTasks, newTasksOfDay;
+
+    if (this.state.tasksId.includes(id)) {
+      newTasksId = [...tasksId];
+    } else {
+      newTasksId = [...tasksId, id];
+    }
+
+    if (tasks.hasOwnProperty(id)) {
+      newTasksOfDay = [...tasks[id], task];
+      newTasks = { ...tasks, [id]: newTasksOfDay };
+    } else {
+      newTasksOfDay = [task];
+      newTasks = { ...tasks, [id]: newTasksOfDay };
+    }
+
+    localStorage.setItem("tasks", JSON.stringify(newTasks));
+    localStorage.setItem("tasksId", JSON.stringify(newTasksId));
+
+    this.setState({
+      tasksId: newTasksId,
+      tasks: newTasks
+    });
+  };
+
+  deleteTask = (id, taskId) => {
+    let { tasks, tasksId } = this.state;
+    const newTasksOfDay = tasks[id].filter(task =>
+      task.id === taskId ? false : true
     );
+
+    let newTasks = { ...tasks, [id]: newTasksOfDay };
+    let newTasksId = tasksId;
+    // console.log(newTasks);
+    if (newTasksOfDay.length === 0) {
+      delete newTasks[id];
+      newTasksId = tasksId.filter(dayId => (dayId === id ? false : true));
+    }
+
+    localStorage.setItem("tasks", JSON.stringify(newTasks));
+    localStorage.setItem("tasksId", JSON.stringify(newTasksId));
+
+    this.setState({
+      tasks: newTasks,
+      tasksId: newTasksId
+    });
+  };
+
+  componentDidMount() {
+    const date = new Date();
+    const firstDayOfMonth = format(startOfMonth(date), "d");
+    const daysInMonth = getDaysInMonth(date);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const tasks = JSON.parse(localStorage.getItem("tasks"));
+    const tasksId = JSON.parse(localStorage.getItem("tasksId"));
+    this.setState({
+      tasks,
+      tasksId,
+      year,
+      month,
+      firstDayOfMonth,
+      daysInMonth,
+      today: new Date(),
+      loading: false
+    });
+  }
+
+  renderDays = () => {
+    const {
+      year,
+      month,
+      daysInMonth,
+      firstDayOfMonth,
+      tasks,
+      tasksId
+    } = this.state;
+
+    let daysInPrevMonth,
+      prevNumOfDays,
+      prevDays,
+      nextAmountOfDays,
+      nextDays,
+      currentDays,
+      calendarDays,
+      calendarDaysWithTasks;
+
+    daysInPrevMonth = getDaysInMonth(
+      new Date(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1)
+    );
+
+    // Sunday == 0 (string)
+    prevNumOfDays = firstDayOfMonth == 0 ? 7 - 1 : firstDayOfMonth - 1;
+    prevDays = Array.from({ length: prevNumOfDays }).map((key, i) => {
+      const date = new Date(
+        year,
+        month - 1,
+        i + (daysInPrevMonth - prevNumOfDays + 1)
+      );
+      return {
+        id: format(date, "D/MM/YYYY"),
+        dim: true,
+        isToday: isToday(date),
+        previous: true
+      };
+    });
+
+    currentDays = Array.from({ length: daysInMonth }).map((key, i) => {
+      const date = new Date(year, month, i + 1);
+      return {
+        id: format(date, "D/MM/YYYY"),
+        dim: false,
+        isToday: isToday(date)
+      };
+    });
+
+    nextAmountOfDays = 42 - (prevNumOfDays + daysInMonth);
+
+    nextDays = Array.from({ length: nextAmountOfDays }).map((key, i) => {
+      const date = new Date(
+        month === 11 ? year + 1 : year,
+        month === 11 ? 0 : month + 1,
+        i + 1
+      );
+      return {
+        id: format(date, "D/MM/YYYY"),
+        dim: true,
+        isToday: isToday(date),
+        next: true
+      };
+    });
+
+    calendarDays = [...prevDays, ...currentDays, ...nextDays];
+
+    calendarDaysWithTasks = calendarDays.map(day => {
+      if (tasksId.includes(day.id)) {
+        return { ...day, tasks: tasks[day.id] };
+      } else {
+        return { ...day, tasks: [] };
+      }
+    });
+
+    return calendarDaysWithTasks.map(({ id, dim, isToday, tasks = [] }) => (
+      <Day
+        key={id}
+        isToday={isToday}
+        dim={dim}
+        id={id}
+        tasks={tasks}
+        addTask={this.addTask}
+        deleteTask={this.deleteTask}
+      />
+    ));
+  };
+
+  changeMonth = type => {
+    let { year, month } = this.state;
+    if (type === "prev") {
+      const {
+        yearForState,
+        monthForState,
+        daysInMonth,
+        firstDayOfMonth
+      } = getInfoAboutMonth(type, year, month);
+
+      this.setState({
+        year: yearForState,
+        month: monthForState,
+        firstDayOfMonth,
+        daysInMonth
+      });
+    }
+    if (type === "next") {
+      const {
+        yearForState,
+        monthForState,
+        daysInMonth,
+        firstDayOfMonth
+      } = getInfoAboutMonth(type, year, month);
+     
+
+      const firstDayOfMonth = format(startOfMonth(date), "d");
+      const lastWeekDayOfMonth = format(endOfMonth(date), "d");
+      const daysInMonth = getDaysInMonth(date);
+      const month = date.getMonth();
+      const year = date.getFullYear();
+      this.setState({
+        firstDayOfMonth,
+        lastWeekDayOfMonth,
+        daysInMonth,
+        year,
+        month
+      });
+    }
+    if (type === "current") {
+      const date = new Date();
+      const firstDayOfMonth = format(startOfMonth(date), "d");
+      const lastWeekDayOfMonth = format(endOfMonth(date), "d");
+      const daysInMonth = getDaysInMonth(date);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      this.setState({
+        firstDayOfMonth,
+        lastWeekDayOfMonth,
+        daysInMonth,
+        year,
+        month
+      });
+    }
+  };
+
+  render() {
+    if (this.state.loading) {
+      return null;
+    } else {
+      return (
+        <Wrapper>
+          <Header>
+            <LeftArrow onClick={() => this.changeMonth("prev")} />
+            <TodayCTA onClick={() => this.changeMonth("current")}>
+              cегодня
+            </TodayCTA>
+            <RightArrow onClick={() => this.changeMonth("next")} />
+          </Header>
+          <Body>
+            <Month>{`${format(
+              new Date(this.state.year, this.state.month),
+              "MMM"
+            )} ${this.state.year}`}</Month>
+            <DaysOfWeek>
+              <span>Пн</span>
+              <span>Вт</span>
+              <span>Ср</span>
+              <span>Чт</span>
+              <span>Пт</span>
+              <span>Сб</span>
+              <span>Вс</span>
+            </DaysOfWeek>
+            <Days>{this.renderDays()}</Days>
+          </Body>
+        </Wrapper>
+      );
+    }
   }
 }
