@@ -135,7 +135,7 @@ export default class Calendar extends Component {
     const nextDays = getNextDays(this.state, nextAmountOfDays);
 
     const calendarDays = [...prevDays, ...currentDays, ...nextDays];
-    console.log(tasksId);
+    
     //check if days have tasks
     const calendarDaysWithTasks = calendarDays.map(day => {
       if (tasksId.includes(day.id)) {

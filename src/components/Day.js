@@ -1,76 +1,10 @@
 import React, { Component } from "react";
-import styled, { keyframes } from "styled-components";
-import { format } from "date-fns";
+import PropTypes from "prop-types";
 
 import Modal from "./Modal";
+import { StyledDay } from "../styled-components/Day";
 
-const ruLocale = require("date-fns/locale/ru");
-
-const animation = keyframes`
-  0% {
-    transform: scale(1);
-    background: #e5989b;
-  }
-  50% {
-    transform: scale(1.2);
-    background: #ff5f65;
-  }
-  100% {
-    transform: scale(1);
-    background: #e5989b;
-  }
-`;
-
-const StyledDay = styled.span`
-  color: ${({ dim }) => (dim ? "#929292" : "#ffece2")};
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: default;
-  position: relative;
-  font-weight: 600;
-  border: 1px solid transparent;
-  transition: all 0.2s;
-
-  & span {
-    content: "";
-    width: 30px;
-    height: 30px;
-    position: absolute;
-    border-radius: 100%;
-    z-index: 0;
-    display: ${({ isToday }) => (isToday ? "block" : "none")};
-    background-color: #e5989b;
-    animation: ${animation} 1s linear;
-    animation-iteration-count: 2;
-    ${({ animate }) =>
-      animate
-        ? "animation-play-state: running"
-        : "animation-play-state: paused"}
-  }
-
-  &::after {
-    position: absolute;
-    content: "";
-    background: ${({ color }) => color};
-    top: 7%;
-    right: 7%;
-    height: 7px;
-    width: 7px;
-    border-radius: 100%;
-    display: ${({ isHaveTasks }) => (isHaveTasks ? "block" : "none")};
-  }
-
-  p {
-    z-index: 1;
-  }
-
-  &:hover {
-    border-color: ${({ dim }) => (dim ? "#929292" : "#ffcdb2")};
-  }
-`;
-
-export default class Day extends Component {
+class Day extends Component {
   state = {
     showModal: false
   };
@@ -90,11 +24,6 @@ export default class Day extends Component {
       deleteTask,
       isPrevious
     } = this.props;
-
-    // const currentDate = id.split("/"); // [19, 06, 1994]
-    // currentDate[1] = format(new Date(currentDate[0], currentDate[2]), "MMMM", {
-    //   locale: ruLocale
-    // });
 
     return (
       <>
@@ -123,3 +52,16 @@ export default class Day extends Component {
     );
   }
 }
+
+Day.propTypes = {
+  tasks: PropTypes.arrayOf(PropTypes.object).isRequired,
+  isToday: PropTypes.bool,
+  dim: PropTypes.bool,
+  animate: PropTypes.bool,
+  id: PropTypes.string.isRequired,
+  addTask: PropTypes.func,
+  deleteTask: PropTypes.func,
+  isPrevious: PropTypes.bool
+};
+
+export default Day;
