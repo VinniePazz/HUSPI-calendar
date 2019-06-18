@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { getDaysInMonth, format, isToday } from "date-fns";
+import { format } from "date-fns";
 
 import {
   Wrapper,
@@ -8,14 +8,21 @@ import {
   Month,
   DaysOfWeek,
   CalendarDays
-} from "../styled-components";
-import { getInfoAboutMonth } from "../utils/dates";
+} from "../styled-components/Calendar";
+
+import {
+  getInfoAboutMonth,
+  getPreviousDays,
+  getCurrentDays,
+  getNextDays
+} from "../utils/dates";
 
 import Day from "./Day";
+// ====================== icons ========================
 import LeftArrow from "../icons/LeftArrow";
 import RightArrow from "../icons/RightArrow";
 import Home from "../icons/Home";
-
+// =====================================================
 const ruLocale = require("date-fns/locale/ru");
 
 export default class Calendar extends Component {
@@ -26,18 +33,43 @@ export default class Calendar extends Component {
     animate: false
   };
 
+  componentDidMount() {
+    // get current date info
+    const {
+      yearForState,
+      monthForState,
+      daysInMonth,
+      firstDayOfMonth
+    } = getInfoAboutMonth("initial");
+
+    // get data from previous user sessions
+    let tasks = JSON.parse(localStorage.getItem("tasks"));
+    let tasksId = JSON.parse(localStorage.getItem("tasksId"));
+
+    //Maded for browser compatibility - LocalStorage individual bitch
+    tasks = tasks || {};
+    tasksId = tasksId || [];
+
+    this.setState({
+      tasks,
+      tasksId,
+      year: yearForState,
+      month: monthForState,
+      firstDayOfMonth,
+      daysInMonth,
+      today: new Date(),
+      loading: false
+    });
+  }
+
   addTask = (date, task) => {
     let newTasksId, newTasks, newTasksOfDay;
     const { tasksId, tasks } = this.state;
     task.id = Date.now(); //generated aka unique id for task
+
     // check if we already have tasks in this day
     if (tasksId.includes(date)) {
       newTasksId = [...tasksId];
-    } else {
-      newTasksId = [...tasksId, date];
-    }
-
-    if (tasks.hasOwnProperty(date)) {
       newTasksOfDay = [...tasks[date], task].sort((task1, task2) => {
         if (task1.hours < task2.hours) {
           return -1;
@@ -49,6 +81,7 @@ export default class Calendar extends Component {
       });
       newTasks = { ...tasks, [date]: newTasksOfDay };
     } else {
+      newTasksId = [...tasksId, date];
       newTasksOfDay = [task];
       newTasks = { ...tasks, [date]: newTasksOfDay };
     }
@@ -70,7 +103,6 @@ export default class Calendar extends Component {
 
     let newTasks = { ...tasks, [id]: newTasksOfDay };
     let newTasksId = tasksId;
-    // console.log(newTasks);
     if (newTasksOfDay.length === 0) {
       delete newTasks[id];
       newTasksId = tasksId.filter(dayId => (dayId === id ? false : true));
@@ -85,35 +117,8 @@ export default class Calendar extends Component {
     });
   };
 
-  componentDidMount() {
-    // get current date info
-    const {
-      yearForState,
-      monthForState,
-      daysInMonth,
-      firstDayOfMonth
-    } = getInfoAboutMonth("initial");
-
-    // get data from previous sessions
-    const tasks = JSON.parse(localStorage.getItem("tasks"));
-    const tasksId = JSON.parse(localStorage.getItem("tasksId"));
-
-    this.setState({
-      tasks,
-      tasksId,
-      year: yearForState,
-      month: monthForState,
-      firstDayOfMonth,
-      daysInMonth,
-      today: new Date(),
-      loading: false
-    });
-  }
-
   renderDays = () => {
     const {
-      year,
-      month,
       daysInMonth,
       firstDayOfMonth,
       tasks,
@@ -121,79 +126,35 @@ export default class Calendar extends Component {
       animate
     } = this.state;
 
-    let daysInPrevMonth,
-      prevNumOfDays,
-      prevDays,
-      nextAmountOfDays,
-      nextDays,
-      currentDays,
-      calendarDays,
-      calendarDaysWithTasks;
+    const cells = 42;
+    const prevAmountOfDays = firstDayOfMonth == 0 ? 7 - 1 : firstDayOfMonth - 1; // Sunday == 0 :)
+    const nextAmountOfDays = cells - (prevAmountOfDays + daysInMonth);
 
-    daysInPrevMonth = getDaysInMonth(
-      new Date(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1)
-    );
+    const prevDays = getPreviousDays(this.state);
+    const currentDays = getCurrentDays(this.state);
+    const nextDays = getNextDays(this.state, nextAmountOfDays);
 
-    // Sunday == 0 (string)
-    prevNumOfDays = firstDayOfMonth == 0 ? 7 - 1 : firstDayOfMonth - 1;
-    prevDays = Array.from({ length: prevNumOfDays }).map((key, i) => {
-      const date = new Date(
-        year,
-        month - 1,
-        i + (daysInPrevMonth - prevNumOfDays + 1)
-      );
-      return {
-        id: format(date, "D/MM/YYYY"),
-        dim: true,
-        previous: true
-      };
-    });
-
-    currentDays = Array.from({ length: daysInMonth }).map((key, i) => {
-      const date = new Date(year, month, i + 1);
-      return {
-        id: format(date, "D/MM/YYYY"),
-        dim: false,
-        isToday: isToday(date)
-      };
-    });
-
-    nextAmountOfDays = 42 - (prevNumOfDays + daysInMonth);
-
-    nextDays = Array.from({ length: nextAmountOfDays }).map((key, i) => {
-      const date = new Date(
-        month === 11 ? year + 1 : year,
-        month === 11 ? 0 : month + 1,
-        i + 1
-      );
-      return {
-        id: format(date, "D/MM/YYYY"),
-        dim: true
-      };
-    });
-
-    calendarDays = [...prevDays, ...currentDays, ...nextDays];
-
+    const calendarDays = [...prevDays, ...currentDays, ...nextDays];
+    console.log(tasksId);
     //check if days have tasks
-    calendarDaysWithTasks = calendarDays.map(day => {
+    const calendarDaysWithTasks = calendarDays.map(day => {
       if (tasksId.includes(day.id)) {
         return { ...day, tasks: tasks[day.id] };
       } else {
         return { ...day, tasks: [] };
       }
     });
-
-    //and finally - render all our calendar days - EASY LIFE!
+    //and finally - render all our calendar days = EASY LIFE!
     return calendarDaysWithTasks.map(
       ({ id, dim, isToday, tasks = [], previous }) => (
         <Day
           key={id}
+          tasks={tasks}
           isToday={isToday}
           animate={isToday && animate}
           dim={dim}
           isPrevious={previous}
           id={id}
-          tasks={tasks}
           addTask={this.addTask}
           deleteTask={this.deleteTask}
         />

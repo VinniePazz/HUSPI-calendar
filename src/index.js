@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import "./index.css";
-import App from "./components/App";
+import "./main.css";
+import App from "./App";
 
 ReactDOM.render(<App />, document.getElementById("root"));
 
@@ -10,7 +10,7 @@ const renderApp = () => {
 };
 
 if (process.env.NODE_ENV !== "production" && module.hot) {
-  module.hot.accept("./components/App", renderApp);
+  module.hot.accept("./App", renderApp);
 }
 
 renderApp();

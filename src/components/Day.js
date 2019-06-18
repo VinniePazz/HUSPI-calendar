@@ -104,7 +104,7 @@ export default class Day extends Component {
           isToday={isToday}
           animate={animate}
           isHaveTasks={tasks.length > 0}
-          color={tasks.length > 0 && tasks[0].color}
+          color={tasks.length > 0 ? tasks[0].color : null}
         >
           <p>{id.split("/")[0]}</p>
           <span />

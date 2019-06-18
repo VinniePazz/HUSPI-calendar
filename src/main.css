@@ -15,6 +15,7 @@ body {
   background: #ffafbd;
   background: -webkit-linear-gradient(to bottom, #ffc3a0, #ffafbd);
   background: linear-gradient(to bottom, #ffc3a0, #ffafbd);
+  color: rgba(0, 0, 0, 0.75);
 }
 
 * {
