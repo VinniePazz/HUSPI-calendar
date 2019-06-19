@@ -1,14 +1,10 @@
 import { getDaysInMonth, format, startOfMonth, isToday } from "date-fns";
 
 export const getInfoAboutMonth = (type, year, month) => {
-  let date, yearForState, monthForState, daysInMonth, firstDayOfMonth;
+  let date;
 
   if (type === "current" || type === "initial") {
     date = new Date();
-    firstDayOfMonth = format(startOfMonth(date), "d");
-    daysInMonth = getDaysInMonth(date);
-    yearForState = date.getFullYear();
-    monthForState = date.getMonth();
   }
 
   if (type === "prev") {
@@ -16,10 +12,6 @@ export const getInfoAboutMonth = (type, year, month) => {
       month === 0 ? year - 1 : year,
       month === 0 ? 11 : month - 1
     );
-    firstDayOfMonth = format(startOfMonth(date), "d");
-    daysInMonth = getDaysInMonth(date);
-    monthForState = date.getMonth();
-    yearForState = date.getFullYear();
   }
 
   if (type === "next") {
@@ -27,11 +19,12 @@ export const getInfoAboutMonth = (type, year, month) => {
       month === 11 ? year + 1 : year,
       month === 11 ? 0 : month + 1
     );
-    firstDayOfMonth = format(startOfMonth(date), "d");
-    daysInMonth = getDaysInMonth(date);
-    monthForState = date.getMonth();
-    yearForState = date.getFullYear();
   }
+
+  const firstDayOfMonth = format(startOfMonth(date), "d");
+  const daysInMonth = getDaysInMonth(date);
+  const yearForState = date.getFullYear();
+  const monthForState = date.getMonth();
 
   return {
     yearForState,
